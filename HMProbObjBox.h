@@ -7,9 +7,9 @@ template <typename T1>
 class CHMProbObjBox
 {
 public:
-	CHMProbObjBox() : m_nCurrentProbObjCount(0)
+	CHMProbObjBox() : m_unCurrentProbObjCount(0)
 	{
-		std::vector<std::pair<T1, int>>().swap(m_vecProbObjPool);
+		std::vector<std::pair<T1, unsigned int>>().swap(m_vecProbObjPool);
 	}
 	~CHMProbObjBox() {};
 
@@ -22,52 +22,44 @@ public:
 	// Return:		Return true if succeed, false if failed.
 	bool Draw(T1& t1ProbObj, const int nRand = -1)
 	{
-		if (0 >= m_nCurrentProbObjCount) return false;
+		if (0 == m_unCurrentProbObjCount) return false;
 		if (nRand < 0 && -1 != nRand) return false;
 
-		auto nKeyNum = ((0 > nRand) ? rand() : nRand) % m_nCurrentProbObjCount;
-		if (!FindProbObjByRandKey(t1ProbObj, nKeyNum)) return false;
+		unsigned int unRand = (0 > nRand) ? rand() : nRand;
+		unsigned int unKeyNum = unRand % m_unCurrentProbObjCount;
 
-		return true;
+		return FindProbObjByRandKey(t1ProbObj, unKeyNum);
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////
-	// Describe:	Put in or take out probability objects from this box, so that we can
-	//				get a proper probability objects box we wanted.
-	// t1ProbObj:	A pointer to the storage of object that you want to put in or take out.
-	// pCount:		A pointer to the storage of every object's count.
-	// nLen:		The length of storage.
+	// Describe:	Modify probability objects of this box, so that we can get a proper
+	//				probability objects box we wanted.
+	// t1ProbObj:	A pointer to the storage of object that you want to modify.
+	// pCount:		A pointer to the storage of every object's new count.
+	// unLen:		The length of storage.
 	// Return:		None.
-	void Modify(const T1* const t1ProbObj, const int* const pCount, const int nLen = 1)
+	void Modify(const T1* const t1ProbObj, const unsigned int* const pCount, const unsigned int unLen = 1)
 	{
-		if (NULL == t1ProbObj || NULL == pCount || 0 >= nLen) return;
+		if (NULL == t1ProbObj || NULL == pCount || 0 == unLen) return;
 
-		for (auto i = 0; i < nLen; i++)
+		for (unsigned int i = 0; i < unLen; i++)
 		{
-			if (0 == pCount[i] || m_scnProbObjBoxCapacity - m_nCurrentProbObjCount < pCount[i]) continue;
-
-			if (!ModifyProbObjPool(t1ProbObj[i], pCount[i])) continue;
-
-			m_nCurrentProbObjCount += pCount[i];
+			ModifyProbObjPool(t1ProbObj[i], pCount[i]);
 		}
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////
-	// Describe:	Put in or take out probability objects from this box, so that we can
-	//				get a proper probability objects box we needed.
-	// t2ProbObj:	A user-defined container which contains the probability objects we want
-	//				to put in or take out and their counts.
+	// Describe:	Modify probability objects of this box, so that we can get a proper
+	//				probability objects box we needed.
+	// t2ProbObj:	A user-defined container which contains the probability objects and
+	//				their counts we want.
 	// Return:		None.
 	template <typename T2>
 	void Modify(const T2& t2ProbObj)
 	{
 		for (auto it = t2ProbObj.cbegin(); it != t2ProbObj.cend(); it++)
 		{
-			if (0 == it->second || m_scnProbObjBoxCapacity - m_nCurrentProbObjCount < it->second) continue;
-
-			if (!ModifyProbObjPool(it->first, it->second)) continue;
-
-			m_nCurrentProbObjCount += it->second;
+			ModifyProbObjPool(it->first, it->second);
 		}
 	}
 
@@ -76,8 +68,8 @@ public:
 	// Return:		None.
 	void Clear()
 	{
-		m_nCurrentProbObjCount = 0;
-		std::vector<std::pair<T1, int>>().swap(m_vecProbObjPool);
+		m_unCurrentProbObjCount = 0;
+		std::vector<std::pair<T1, unsigned int>>().swap(m_vecProbObjPool);
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////
@@ -85,9 +77,9 @@ public:
 	// pProbObj:	A pointer of the specific probability object, if it == NULL, get the
 	//				total count.
 	// Return:		The count.
-	int GetCount(const T1* const pProbObj = NULL) const
+	unsigned int GetCount(const T1* const pProbObj = NULL) const
 	{
-		if (NULL == pProbObj) return m_nCurrentProbObjCount;
+		if (NULL == pProbObj) return m_unCurrentProbObjCount;
 
 		for (auto it = m_vecProbObjPool.cbegin(); it != m_vecProbObjPool.cend(); it++)
 		{
@@ -99,18 +91,15 @@ public:
 	//////////////////////////////////////////////////////////////////////////////////////
 	// Describe:	Get the probability objects pool.
 	// Return:		The probability objects pool.
-	const auto& GetPool() const
-	{
-		return m_vecProbObjPool;
-	}
+	const auto& GetPool() const{ return m_vecProbObjPool; }
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	// Describe:	Dump the details of this box.
 	// Return:		None.
 	void Dump() const
 	{
-		std::cout << "Current total probability object count " << m_nCurrentProbObjCount << "." << std::endl;
-		std::cout << "Probability object box capacity " << m_scnProbObjBoxCapacity << std::endl;
+		std::cout << "Current total probability object count " << m_unCurrentProbObjCount << "." << std::endl;
+		std::cout << "Probability object box capacity " << m_scunProbObjBoxCapacity << std::endl;
 
 		int nIndex = 0;
 		for (auto it = m_vecProbObjPool.cbegin(); it != m_vecProbObjPool.cend(); it++)
@@ -126,29 +115,36 @@ public:
 	unsigned int Version() const { return m_scunCHMProbObjBoxVersion; }
 
 private:
-	int m_nCurrentProbObjCount;
-	std::vector<std::pair<T1, int>> m_vecProbObjPool;
-	static const int m_scnProbObjBoxCapacity = INT_MAX;
-	static const unsigned int m_scunCHMProbObjBoxVersion = 1;
+	unsigned int m_unCurrentProbObjCount;
+	std::vector<std::pair<T1, unsigned int>> m_vecProbObjPool;
+	static const unsigned int m_scunProbObjBoxCapacity = UINT_MAX;
+	static const unsigned int m_scunCHMProbObjBoxVersion = 2;
 
-	bool ModifyProbObjPool(const T1& t1ProbObj, const int nCount)
+	void ModifyProbObjPool(const T1& t1ProbObj, const unsigned int unCount)
 	{
 		for (auto it = m_vecProbObjPool.begin(); it != m_vecProbObjPool.end(); it++)
 		{
 			if (t1ProbObj == it->first)
 			{
-				if (0 > it->second + nCount) return false;	// 要删除的奖券不够数，返回错误
-				else if (0 == it->second + nCount) m_vecProbObjPool.erase(it);	// 此类奖券被删除完了，移除此项
-				else it->second += nCount;	// 加上此类奖券的数量
-				return true;
+				if (0 == unCount)
+				{
+					m_unCurrentProbObjCount = m_unCurrentProbObjCount - it->second + unCount;
+					m_vecProbObjPool.erase(it);
+				}
+				else if (m_scunProbObjBoxCapacity - unCount >= m_unCurrentProbObjCount - it->second)
+				{
+					it->second = unCount;
+					m_unCurrentProbObjCount = m_unCurrentProbObjCount - it->second + unCount;
+				}
+				return;
 			}
 		}
-		if (0 > nCount) return false;	// 删除不存在的奖券，返回错误
-		else if (0 < nCount)
+
+		if (0 != unCount && m_scunProbObjBoxCapacity - unCount > m_unCurrentProbObjCount)
 		{
 			try
 			{
-				m_vecProbObjPool.push_back(std::make_pair(t1ProbObj, nCount));
+				m_vecProbObjPool.push_back(std::make_pair(t1ProbObj, unCount));
 			}
 			catch (const std::exception& e)
 			{
@@ -158,18 +154,18 @@ private:
 			{
 				std::cout << __FILE__ << "(" << __LINE__ << "), unknow exception" << std::endl;
 			}
+			m_unCurrentProbObjCount += unCount;
 		}
-		return true;
 	}
 
-	bool FindProbObjByRandKey(T1& t1ProbObj, const int nRandKey) const
+	bool FindProbObjByRandKey(T1& t1ProbObj, const unsigned int unRandKey) const
 	{
-		auto nBotton = 0, nTop = 0;
+		unsigned int unBotton = 0, unTop = 0;
 		for (auto it = m_vecProbObjPool.cbegin(); it != m_vecProbObjPool.cend(); it++)
 		{
-			nBotton = nTop;
-			nTop += it->second;
-			if (nRandKey >= nBotton && nRandKey < nTop)
+			unBotton = unTop;
+			unTop += it->second;
+			if (unRandKey >= unBotton && unRandKey < unTop)
 			{
 				t1ProbObj = it->first;
 				return true;
